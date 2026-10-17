@@ -5,6 +5,8 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -12,7 +14,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -46,5 +48,33 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function isPlatformAdmin(): bool
+    {
+        return $this->platform_role === 'platform_admin';
+    }
+
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(AccountMembership::class);
+    }
+
+    public function accounts(): BelongsToMany
+    {
+        return $this->belongsToMany(Account::class, 'account_memberships')
+            ->withPivot(['role', 'status'])
+            ->withTimestamps();
+    }
+
+    public function hasActiveWorkspace(): bool
+    {
+        return $this->memberships()
+            ->where('role', 'owner')
+            ->where('status', 'active')
+            ->whereHas('account', fn ($account) => $account
+                ->where('status', 'active')
+                ->whereHas('stores', fn ($store) => $store->where('status', 'active')))
+            ->exists();
     }
 }

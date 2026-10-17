@@ -1,8 +1,68 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\AccountSettingsController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CurrentUserController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerOpeningBalanceController;
+use App\Http\Controllers\CustomerPaymentController;
+use App\Http\Controllers\CustomerStatementController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SaleController;
+use App\Http\Controllers\SaleReversalController;
+use App\Http\Controllers\SalesReportController;
+use App\Http\Controllers\StoreController;
+use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+Route::prefix('v1')->group(function () {
+    Route::get('/health', fn () => ['status' => 'ok', 'service' => 'Sari-sari Store POS']);
+
+    Route::middleware(['auth:sanctum', 'active.user'])->group(function () {
+        Route::get('/me', CurrentUserController::class);
+        Route::patch('/me/profile', [AccountSettingsController::class, 'profile'])->middleware('throttle:6,1');
+        Route::patch('/me/password', [AccountSettingsController::class, 'password'])->middleware('throttle:6,1');
+        Route::prefix('stores/{store}')->middleware('store.member')->scopeBindings()->group(function () {
+            Route::get('/', [StoreController::class, 'show']);
+            Route::patch('/', [StoreController::class, 'update']);
+            Route::get('/dashboard', DashboardController::class);
+            Route::get('/reports/sales', SalesReportController::class);
+            Route::get('/subscription', [SubscriptionController::class, 'show']);
+            Route::get('/categories', [CategoryController::class, 'index']);
+            Route::post('/categories', [CategoryController::class, 'store']);
+            Route::patch('/categories/{category}', [CategoryController::class, 'update']);
+            Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+            Route::get('/products', [ProductController::class, 'index']);
+            Route::post('/products', [ProductController::class, 'store']);
+            Route::get('/products/lookup', [ProductController::class, 'lookup']);
+            Route::get('/products/{product}', [ProductController::class, 'show']);
+            Route::patch('/products/{product}', [ProductController::class, 'update']);
+            Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+            Route::get('/inventory', [InventoryController::class, 'index']);
+            Route::get('/inventory/movements', [InventoryController::class, 'movements']);
+            Route::post('/inventory/adjustments', [InventoryController::class, 'adjust']);
+            Route::get('/sales', [SaleController::class, 'index']);
+            Route::post('/sales', [SaleController::class, 'store']);
+            Route::get('/sales/by-key/{key}', [SaleController::class, 'byKey']);
+            Route::get('/sale-reversals/by-key/{key}', [SaleReversalController::class, 'byKey']);
+            Route::get('/sales/{sale}/reversal-preview', [SaleReversalController::class, 'preview']);
+            Route::post('/sales/{sale}/reversals', [SaleReversalController::class, 'store']);
+            Route::get('/sales/{sale}', [SaleController::class, 'show']);
+            Route::get('/customers', [CustomerController::class, 'index']);
+            Route::post('/customers', [CustomerController::class, 'store']);
+            Route::get('/customers/{customer}', [CustomerController::class, 'show']);
+            Route::patch('/customers/{customer}', [CustomerController::class, 'update']);
+            Route::patch('/customers/{customer}/status', [CustomerController::class, 'status']);
+            Route::get('/customers/{customer}/statement', CustomerStatementController::class);
+            Route::post('/customers/{customer}/opening-balance', [CustomerOpeningBalanceController::class, 'store']);
+            Route::get('/customers/{customer}/opening-balance/by-key/{key}', [CustomerOpeningBalanceController::class, 'byKey']);
+            Route::get('/customers/{customer}/ledger', [CustomerController::class, 'ledger']);
+            Route::post('/customers/{customer}/payments', [CustomerPaymentController::class, 'store']);
+            Route::get('/customers/{customer}/payments/by-key/{key}', [CustomerPaymentController::class, 'byKey']);
+            Route::get('/customers/{customer}/payments/{payment}', [CustomerPaymentController::class, 'show']);
+        });
+        Route::prefix('admin')->middleware('platform.admin')->group(base_path('routes/admin.php'));
+    });
+});
