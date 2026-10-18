@@ -1,8 +1,12 @@
 *.log
 .DS_Store
 .env
-.env.backup
-.env.production
+.env.*
+!.env.example
+!.env.*.example
+# Legacy private profiles are retained for reference, but are not loaded.
+.development.env
+.production.env
 .phpactor.json
 .phpunit.result.cache
 /.fleet

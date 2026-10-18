@@ -13,7 +13,7 @@ app/Http/Resources/Admin/       # Explicit metadata response allowlists
 app/Http/Middleware/Admin/      # Platform administrator authorization
 app/Services/Admin/            # Platform counts and registration aggregation
 app/Console/Commands/Admin/    # Secure platform administrator provisioning
-routes/admin.php               # Admin read routes; middleware inherited from api.php
+routes/admin.php               # Admin routes; middleware inherited from api.php
 tests/Feature/Admin/           # Authorization, query, privacy, and dashboard tests
 ```
 
@@ -54,7 +54,7 @@ Directory parameters: `q` (trimmed string, max 120), `status` (`all`, `active`, 
 
 Lists return Laravel resource pagination (`data`, `links`, `meta`). Details and the dashboard return `{ data: ... }`. Registration dates use `Asia/Manila` calendar days with bound UTC boundaries; missing days contain actual zero counts. Summary statuses describe individual records, so an active store under a suspended parent account still has its own saved `active` status. User totals include administrators.
 
-Directory resources expose platform metadata only. They do not serialize passwords, tokens, private store sales, products, customers, balances, or inventory. Account/store status mutations remain separate future work, with reason, review, and audit records. GCash and automatic billing are deferred.
+Directory resources expose platform metadata only. They do not serialize passwords, tokens, private store sales, products, customers, balances, or inventory. Account/store suspension and reactivation use dedicated review/confirmation and immutable history endpoints; see [status management](ADMIN_STATUS_SETUP.md). GCash and automatic billing are deferred.
 
 The plan catalog adds administrator-only create/edit/read/version routes under `/api/v1/admin/plans`. See [plan management](PLANS_SETUP.md). Account-scoped manual Basic activation, renewal, and settlement history now have dedicated endpoints and screens; see [manual subscriptions](SUBSCRIPTIONS_SETUP.md).
 

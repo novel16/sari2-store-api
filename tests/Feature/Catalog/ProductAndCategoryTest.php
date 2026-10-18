@@ -78,6 +78,45 @@ it('edits and archives products while retaining stock and movements', function (
     $this->assertDatabaseCount('inventory_movements', 1);
 });
 
+it('keeps the unit fixed after an opening movement even when stock is zero', function (int $opening) {
+    $product = $this->createProduct($this->store, ['initial_stock' => $opening]);
+    $this->patchJson($this->base.'/products/'.$product->id, ['unit' => 'box', 'price_centavos' => 1750])
+        ->assertUnprocessable()->assertJsonValidationErrors('unit');
+
+    expect($product->fresh()->unit)->toBe('bottle')
+        ->and($product->fresh()->price_centavos)->toBe(1500)
+        ->and($product->inventory()->first()->quantity_on_hand)->toBe($opening)
+        ->and($product->inventory()->first()->version)->toBe(1);
+    $this->assertDatabaseCount('inventory_movements', 1);
+
+    $this->patchJson($this->base.'/products/'.$product->id, ['unit' => 'bottle', 'price_centavos' => 1750])
+        ->assertOk()->assertJsonPath('data.unit', 'bottle')->assertJsonPath('data.price_centavos', 1750);
+})->with([0, 10]);
+
+it('checks existing stock before changing a legacy product with no movement history', function () {
+    $product = $this->store->products()->create([
+        'name' => 'Legacy stock', 'unit' => 'bottle', 'price_centavos' => 1500, 'cost_centavos' => 1000,
+    ]);
+    $product->inventory()->create(['store_id' => $this->store->id, 'quantity_on_hand' => 5, 'version' => 0]);
+
+    $this->patchJson($this->base.'/products/'.$product->id, ['unit' => 'box'])
+        ->assertUnprocessable()->assertJsonValidationErrors('unit');
+    expect($product->fresh()->unit)->toBe('bottle')
+        ->and($product->inventory()->first()->quantity_on_hand)->toBe(5);
+    $this->assertDatabaseCount('inventory_movements', 0);
+});
+
+it('allows correcting the unit of an unused legacy product without stock or history', function () {
+    $product = $this->store->products()->create([
+        'name' => 'Unused legacy product', 'unit' => 'bottle', 'price_centavos' => 1500, 'cost_centavos' => 1000,
+    ]);
+    $product->inventory()->create(['store_id' => $this->store->id, 'quantity_on_hand' => 0, 'version' => 0]);
+
+    $this->patchJson($this->base.'/products/'.$product->id, ['unit' => 'box'])
+        ->assertOk()->assertJsonPath('data.unit', 'box');
+    $this->assertDatabaseCount('inventory_movements', 0);
+});
+
 it('requires an active category when restoring a product', function () {
     $category = $this->postJson($this->base.'/categories', ['name' => 'Drinks'])->assertCreated()->json('data.id');
     $product = $this->createProduct($this->store, ['category_id' => $category]);

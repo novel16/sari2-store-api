@@ -7,6 +7,8 @@ use App\Models\CreditLedgerEntry;
 use App\Models\Customer;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Cash\CashDayGuard;
+use App\Services\Stores\StoreWriteAccess;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -17,7 +19,8 @@ class RecordRepayment
     {
         return DB::transaction(function () use ($store, $customer, $actor, $input): array {
             // Match credit checkout's lock order to serialize charges and repayments.
-            Store::whereKey($store->id)->lockForUpdate()->firstOrFail();
+            $store = StoreWriteAccess::lock($store);
+            $occurredAt = CashDayGuard::capture();
             $customer = $store->customers()->whereKey($customer->id)->lockForUpdate()->firstOrFail();
             $key = Str::lower($input['request_key']);
             $amount = (int) $input['amount_centavos'];
@@ -32,6 +35,7 @@ class RecordRepayment
 
                 return $this->result($previous, $customer, true);
             }
+            CashDayGuard::ensureCashAllowed($store, $occurredAt);
             $before = $customer->balance_centavos;
             if ((string) $before !== $input['expected_balance_centavos']) {
                 throw new CheckoutConflict('balance_changed', 'The customer balance changed. Review the current balance and confirm the payment again.');
@@ -47,6 +51,7 @@ class RecordRepayment
                 'request_key' => $key, 'request_hash' => $hash, 'payment_method' => 'cash', 'notes' => $notes,
                 'actor_name_snapshot' => $actor->name, 'customer_name_snapshot' => $customer->name,
                 'customer_phone_snapshot' => $customer->phone,
+                'created_at' => $occurredAt,
             ]);
 
             return $this->result($entry, $customer, false);

@@ -2,10 +2,10 @@
 
 namespace App\Services\Catalog;
 
-use App\Models\Account;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Stores\StoreWriteAccess;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -18,10 +18,15 @@ class ProductWriter
     public function save(Store $store, User $actor, array $attributes, ?Product $product = null): Product
     {
         return DB::transaction(function () use ($store, $actor, $attributes, $product): Product {
-            Account::whereKey($store->account_id)->lockForUpdate()->firstOrFail();
-            Store::whereKey($store->id)->lockForUpdate()->firstOrFail();
+            $store = StoreWriteAccess::lock($store);
             $product = $product ? $store->products()->whereKey($product->id)->lockForUpdate()->firstOrFail() : $store->products()->make();
             $creating = ! $product->exists;
+            if (! $creating && array_key_exists('unit', $attributes) && $attributes['unit'] !== $product->unit
+                && ($product->inventory()->where('store_id', $store->id)->where('quantity_on_hand', '>', 0)->exists()
+                    || $product->movements()->where('store_id', $store->id)->exists()
+                    || DB::table('sale_items')->where('store_id', $store->id)->where('product_id', $product->id)->exists())) {
+                throw ValidationException::withMessages(['unit' => ['The unit cannot change after stock or history has been recorded. Create a separate product for a different unit.']]);
+            }
             $status = $attributes['status'] ?? ($creating ? 'active' : $product->status);
             if ($status === 'active' && ($creating || $product->status !== 'active')) {
                 $this->quota->ensureRoom($store);

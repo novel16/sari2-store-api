@@ -6,6 +6,8 @@ use App\Exceptions\CheckoutConflict;
 use App\Models\Sale;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Cash\CashDayGuard;
+use App\Services\Stores\StoreWriteAccess;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -16,7 +18,8 @@ class CompleteSale
     {
         return DB::transaction(function () use ($store, $actor, $input): array {
             // Share the same lock order with catalog edits and stock adjustments.
-            $store = Store::whereKey($store->id)->lockForUpdate()->firstOrFail();
+            $store = StoreWriteAccess::lock($store);
+            $occurredAt = CashDayGuard::capture();
             $items = collect($input['items'])->map(fn ($item) => [
                 'product_id' => (int) $item['product_id'], 'quantity' => (int) $item['quantity'],
                 'expected_price' => isset($item['expected_unit_price_centavos']) ? (int) $item['expected_unit_price_centavos'] : null,
@@ -35,6 +38,9 @@ class CompleteSale
                 }
 
                 return $this->result($previous, true);
+            }
+            if ($method === 'cash') {
+                CashDayGuard::ensureCashAllowed($store, $occurredAt);
             }
             if ($items->pluck('product_id')->unique()->count() !== $items->count()) {
                 throw ValidationException::withMessages(['items' => ['Each product must appear only once in the cart.']]);
@@ -89,9 +95,9 @@ class CompleteSale
                 'payment_method' => $method, 'customer_id' => $customer?->id,
                 'customer_name_snapshot' => $customer?->name, 'customer_phone_snapshot' => $customer?->phone,
                 'credit_amount_centavos' => $method === 'credit' ? $total : 0,
-                'items_count' => $items->count(), 'quantity_total' => $items->sum('quantity'), 'completed_at' => now(),
+                'items_count' => $items->count(), 'quantity_total' => $items->sum('quantity'), 'completed_at' => $occurredAt,
             ]);
-            $sale->forceFill(['sale_number' => 'S-'.now('Asia/Manila')->format('Y').'-'.str_pad((string) $sale->id, 8, '0', STR_PAD_LEFT)])->save();
+            $sale->forceFill(['sale_number' => 'S-'.$occurredAt->setTimezone(CashDayGuard::TIMEZONE)->format('Y').'-'.str_pad((string) $sale->id, 8, '0', STR_PAD_LEFT)])->save();
             foreach ($lines as $line) {
                 ['product' => $product, 'inventory' => $inventory, 'item' => $item, 'lineTotal' => $lineTotal] = $line;
                 $sale->items()->create([
@@ -123,6 +129,7 @@ class CompleteSale
                     'store_id' => $store->id, 'sale_id' => $sale->id, 'actor_user_id' => $actor->id,
                     'entry_type' => 'charge', 'amount_centavos' => $total,
                     'balance_before_centavos' => $before, 'balance_after_centavos' => $before + $total,
+                    'created_at' => $occurredAt,
                 ]);
             }
 

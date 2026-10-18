@@ -12,6 +12,7 @@ use App\Models\CreditLedgerEntry;
 use App\Models\Customer;
 use App\Models\Store;
 use App\Services\Customers\CreateCustomer;
+use App\Services\Stores\StoreWriteAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
@@ -72,7 +73,7 @@ class CustomerController extends Controller
     private function change(Store $store, Customer $customer, array $attributes): Customer
     {
         return DB::transaction(function () use ($store, $customer, $attributes) {
-            Store::whereKey($store->id)->lockForUpdate()->firstOrFail();
+            $store = StoreWriteAccess::lock($store);
             $customer = $store->customers()->whereKey($customer->id)->lockForUpdate()->firstOrFail();
             $customer->fill($attributes)->save();
 

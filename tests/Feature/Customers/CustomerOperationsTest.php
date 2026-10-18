@@ -2,6 +2,8 @@
 
 use App\Models\Customer;
 use App\Models\User;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\Support\SalesTestHelpers;
 
@@ -117,6 +119,22 @@ it('supports an empty pinned statement and refuses foreign payment or statement 
     $id = $this->postJson($this->base.'/customers', ['name' => 'Other', 'request_key' => (string) Str::uuid()])->assertCreated()->json('data.id');
     $this->getJson($this->base.'/customers/'.$id.'/statement?through_id='.$entry)->assertNotFound();
     $this->getJson($this->path.'/payments/'.$entry)->assertNotFound();
+});
+
+it('releases the store transaction before aggregating the immutable statement snapshot', function () {
+    $this->postJson($this->path.'/opening-balance', $this->opening)->assertCreated();
+    $baseline = DB::transactionLevel();
+    $levels = [];
+    DB::listen(function (QueryExecuted $query) use (&$levels) {
+        if (str_contains($query->sql, 'AS opening_centavos')) {
+            $levels[] = $query->connection->transactionLevel();
+        }
+    });
+
+    $this->getJson($this->path.'/statement')->assertOk()
+        ->assertJsonPath('totals.opening_centavos', '5000')
+        ->assertJsonPath('customer.balance_centavos', '5000');
+    expect($levels)->toBe([$baseline]);
 });
 
 it('reconciles statement opening charges payments and pooled credit reversals while preserving sale identity', function () {

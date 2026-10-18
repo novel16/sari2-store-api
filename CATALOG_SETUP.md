@@ -23,6 +23,8 @@ Lists accept `page`, `per_page` (1–100), `q`, and `status=active|archived|all`
 
 Create fields: `name`, optional `description`, optional `category_id`, optional `sku`/`barcode`, `unit`, `price_centavos`, `cost_centavos`, `low_stock_threshold`, `initial_stock`, optional `emoji`/`color`, and optional `status`. Stock and tenant identifiers cannot be overwritten through product edits. Use the stock-adjustment endpoint for changes after opening stock.
 
+A product's unit cannot change once it has stock, an inventory movement, or a saved sale item. Every newly created product has an opening movement, including zero stock, so choose its unit at creation; use a separate product for a different selling unit. Attempts return a 422 `unit` field error without saving other edits. Only unused legacy products with no stock or history can have their unit corrected.
+
 Money is integer centavos. Price/cost and whole-unit quantities are bounded at 1,000,000,000. Inventory valuation is returned as a decimal integer **string**, keeping large centavo totals exact in JavaScript. The UI converts peso entry to centavos without floating-point rounding.
 
 Codes use letters, digits, dot, underscore, and hyphen; they are normalized to uppercase. Barcodes remain strings, preserving leading zeros. SKU/barcode uniqueness is **per store**, including archived products; multiple absent codes are allowed. Category names are unique per store, ignoring case and surrounding whitespace, including archived names.
@@ -33,7 +35,7 @@ DELETE archives records; PATCH with `status: "active"` restores them. Product re
 
 ## Stock integrity
 
-Every product receives an opening movement, including zero opening stock. Stock changes and their movement records commit in one transaction, locking store, product, then inventory. Each movement records before/after quantities, signed delta, version, reason, actor, and timestamp. There are no movement edit/delete endpoints.
+Every product receives an opening movement, including zero opening stock. Stock changes and their movement records commit in one transaction, locking account, store, product, then inventory. Current account/store availability is rechecked after acquiring those workspace locks. Each movement records before/after quantities, signed delta, version, reason, actor, and timestamp. There are no movement edit/delete endpoints.
 
 Adjustment example:
 
@@ -49,7 +51,9 @@ Adjustment example:
 
 Modes are `add`, `remove`, and `set`. Negative stock, overflow, and changes of zero are rejected. `set` also requires `expected_version` from the product's current `inventory.version`; stale counts return 409. Add/remove operations calculate from the locked server quantity.
 
-Use a fresh UUID `request_key` for each new adjustment. Retry **the same payload and key** after an uncertain network result. A successful replay returns 200 with `meta.replayed=true` and does not change stock again. Reusing the key with different details returns 409. The client retains the key when retrying unchanged details.
+Use a fresh UUID `request_key` for each new adjustment. Retry **the same payload and key** after an uncertain network result. A successful replay returns 200 with `meta.replayed=true` and does not change stock again. Reusing the key with different details returns 409 `adjustment_key_conflict`; a stale count returns `stock_changed`, and an archived product returns `product_archived`.
+
+The client saves the exact adjustment in per-user/store session storage **before** sending it. Uncertain outcomes freeze its details and block new adjustments until the same request is confirmed. Recovery survives modal close, navigation and reload in the same tab. Late responses after leaving the page retain recovery rather than silently acknowledging it. A known rejection from the adjustment POST permits a new review; CSRF errors, unknown conflicts, 404s, network failures and 5xx responses retain the original key. Unavailable/corrupt storage blocks writes. Closing the browser tab or clearing its storage removes local recovery, so use movement history to verify any unresolved adjustment before recording another.
 
 ## Client behavior
 

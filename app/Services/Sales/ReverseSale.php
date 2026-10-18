@@ -8,6 +8,8 @@ use App\Models\Sale;
 use App\Models\SaleReversal;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Cash\CashDayGuard;
+use App\Services\Stores\StoreWriteAccess;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -31,7 +33,8 @@ class ReverseSale
     public function handle(Store $store, Sale $sale, User $actor, array $input): array
     {
         return DB::transaction(function () use ($store, $sale, $actor, $input) {
-            Store::whereKey($store->id)->lockForUpdate()->firstOrFail();
+            $store = StoreWriteAccess::lock($store);
+            $occurredAt = CashDayGuard::capture();
             $sale = $store->sales()->whereKey($sale->id)->lockForUpdate()->firstOrFail();
             $key = Str::lower($input['request_key']);
             $hash = hash('sha256', json_encode([$actor->id, $sale->id, $input['kind'], trim($input['reason']),
@@ -47,6 +50,9 @@ class ReverseSale
             $this->available($sale);
             $customer = $sale->customer_id ? $store->customers()->whereKey($sale->customer_id)->lockForUpdate()->firstOrFail() : null;
             $amounts = $this->amounts($sale, $customer);
+            if ($amounts['cash_refund_centavos'] > 0) {
+                CashDayGuard::ensureCashAllowed($store, $occurredAt);
+            }
             if ($amounts['balance_before_centavos'] !== $input['expected_balance_centavos']) {
                 throw new CheckoutConflict('balance_changed', 'The customer balance changed. Review the cash refund and utang adjustment again.');
             }
@@ -57,6 +63,7 @@ class ReverseSale
                 'store_id' => $store->id, 'sale_id' => $sale->id, 'actor_user_id' => $actor->id,
                 'actor_name_snapshot' => $actor->name, 'request_key' => $key, 'request_hash' => $hash,
                 'kind' => $input['kind'], 'reason' => trim($input['reason']), 'restock' => (bool) $input['restock'], ...$amounts,
+                'created_at' => $occurredAt,
             ]);
             if ($input['restock']) {
                 $items = $sale->items()->reorder('product_id')->orderBy('id')->get();
@@ -69,6 +76,9 @@ class ReverseSale
 
                 foreach ($items as $item) {
                     $product = $products[$item->product_id];
+                    if ($product->unit !== $item->unit_snapshot) {
+                        throw ValidationException::withMessages(['restock' => ['A product unit differs from the original sale. Choose no restock and reconcile the returned stock separately.']]);
+                    }
                     $inventory = $product->inventory;
                     abort_unless($inventory, 404);
                     $before = $inventory->quantity_on_hand;
@@ -93,6 +103,7 @@ class ReverseSale
                     'balance_before_centavos' => $amounts['balance_before_centavos'], 'balance_after_centavos' => $amounts['balance_after_centavos'],
                     'notes' => trim($input['reason']), 'actor_name_snapshot' => $actor->name,
                     'customer_name_snapshot' => $customer->name, 'customer_phone_snapshot' => $customer->phone,
+                    'created_at' => $occurredAt,
                 ]);
             }
 

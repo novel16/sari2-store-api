@@ -10,7 +10,7 @@ class CreditLedgerEntry extends Model
     public const UPDATED_AT = null;
 
     protected $fillable = ['store_id', 'sale_id', 'actor_user_id', 'entry_type', 'amount_centavos', 'balance_before_centavos', 'balance_after_centavos',
-        'request_key', 'request_hash', 'payment_method', 'notes', 'actor_name_snapshot', 'customer_name_snapshot', 'customer_phone_snapshot', 'sale_reversal_id'];
+        'request_key', 'request_hash', 'payment_method', 'notes', 'actor_name_snapshot', 'customer_name_snapshot', 'customer_phone_snapshot', 'sale_reversal_id', 'created_at'];
 
     protected function casts(): array
     {

@@ -7,6 +7,7 @@ use App\Models\CreditLedgerEntry;
 use App\Models\Customer;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Stores\StoreWriteAccess;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -15,7 +16,7 @@ class RecordOpeningBalance
     public function handle(Store $store, Customer $customer, User $actor, array $input): array
     {
         return DB::transaction(function () use ($store, $customer, $actor, $input) {
-            Store::whereKey($store->id)->lockForUpdate()->firstOrFail();
+            $store = StoreWriteAccess::lock($store);
             $customer = $store->customers()->whereKey($customer->id)->lockForUpdate()->firstOrFail();
             $key = Str::lower($input['request_key']);
             $amount = (int) $input['amount_centavos'];

@@ -43,6 +43,48 @@ it('supports void and no-restock including archived products', function () {
     expect($this->product->inventory()->first()->quantity_on_hand)->toBe(8);
 });
 
+it('requires no restock for a cash refund when a legacy product unit differs from the sale', function () {
+    // Simulate data saved before unit changes were restricted.
+    $this->product->update(['unit' => 'box']);
+    $this->postJson($this->path, $this->input)->assertUnprocessable()->assertJsonValidationErrors('restock');
+    $this->assertDatabaseCount('sale_reversals', 0);
+    $this->assertDatabaseMissing('inventory_movements', ['movement_type' => 'sale_return']);
+    expect($this->product->inventory()->first()->quantity_on_hand)->toBe(8);
+
+    $this->postJson($this->path, [...$this->input, 'restock' => false])->assertCreated()
+        ->assertJsonPath('reversal.cash_refund_centavos', 2900)->assertJsonPath('reversal.restock', false)
+        ->assertJsonPath('data.items.0.unit_snapshot', 'bottle');
+    expect($this->product->inventory()->first()->quantity_on_hand)->toBe(8);
+});
+
+it('rolls back all restocked lines and keeps utang unchanged when a later legacy unit mismatches', function () {
+    $other = $this->createProduct($this->store);
+    $customerId = $this->postJson($this->base.'/customers', ['request_key' => (string) Str::uuid(), 'name' => 'Suki'])
+        ->assertCreated()->json('data.id');
+    $credit = $this->checkoutData($this->product);
+    $credit['items'][] = ['product_id' => $other->id, 'quantity' => 1];
+    $credit['payment'] = ['method' => 'credit', 'customer_id' => $customerId];
+    $sale = $this->postJson($this->base.'/sales', $credit)->assertCreated()->json('data');
+    $other->update(['unit' => 'box']);
+    $path = $this->base.'/sales/'.$sale['id'].'/reversals';
+    $input = [...$this->input, 'expected_balance_centavos' => '4400'];
+
+    $this->postJson($path, $input)->assertUnprocessable()->assertJsonValidationErrors('restock');
+    $this->assertDatabaseCount('sale_reversals', 0);
+    $this->assertDatabaseMissing('inventory_movements', ['movement_type' => 'sale_return']);
+    $this->assertDatabaseMissing('credit_ledger_entries', ['entry_type' => 'reversal']);
+    expect($this->product->inventory()->first()->quantity_on_hand)->toBe(6)
+        ->and($this->product->inventory()->first()->version)->toBe(3)
+        ->and($other->inventory()->first()->quantity_on_hand)->toBe(9)
+        ->and($this->store->customers()->findOrFail($customerId)->balance_centavos)->toBe(4400);
+
+    $this->postJson($path, [...$input, 'restock' => false])->assertCreated()
+        ->assertJsonPath('reversal.credit_reversed_centavos', 4400)->assertJsonPath('reversal.cash_refund_centavos', 0);
+    expect($this->store->customers()->findOrFail($customerId)->balance_centavos)->toBe(0)
+        ->and($this->product->inventory()->first()->quantity_on_hand)->toBe(6)
+        ->and($other->inventory()->first()->quantity_on_hand)->toBe(9);
+});
+
 it('rolls back every reversal change if stock cannot be restored', function () {
     $this->product->inventory()->update(['quantity_on_hand' => 1000000000]);
     $this->postJson($this->path, $this->input)->assertConflict()->assertJsonPath('code', 'stock_capacity');

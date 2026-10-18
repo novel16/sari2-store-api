@@ -45,7 +45,7 @@ it('replays a successful adjustment without double changing stock even after lat
 
 it('rejects reusing an adjustment key with different details', function () {
     $this->postJson($this->base.'/inventory/adjustments', $this->adjustment)->assertCreated();
-    $this->postJson($this->base.'/inventory/adjustments', array_replace($this->adjustment, ['quantity' => 4]))->assertConflict();
+    $this->postJson($this->base.'/inventory/adjustments', array_replace($this->adjustment, ['quantity' => 4]))->assertConflict()->assertJsonPath('code', 'adjustment_key_conflict');
     expect($this->product->inventory->quantity_on_hand)->toBe(13);
 });
 
@@ -64,13 +64,13 @@ it('requires a version for counted stock and rejects stale counts', function () 
     $this->postJson($this->base.'/inventory/adjustments', $this->adjustment)->assertCreated();
     $this->postJson($this->base.'/inventory/adjustments', array_replace($this->adjustment, [
         'mode' => 'set', 'quantity' => 6, 'expected_version' => 1, 'request_key' => (string) Str::uuid(),
-    ]))->assertConflict();
+    ]))->assertConflict()->assertJsonPath('code', 'stock_changed');
     expect($this->product->inventory->quantity_on_hand)->toBe(13);
 });
 
 it('blocks stock changes to archived products but preserves their history', function () {
     $this->deleteJson($this->base.'/products/'.$this->product->id)->assertOk();
-    $this->postJson($this->base.'/inventory/adjustments', $this->adjustment)->assertConflict();
+    $this->postJson($this->base.'/inventory/adjustments', $this->adjustment)->assertConflict()->assertJsonPath('code', 'product_archived');
     $this->getJson($this->base.'/inventory/movements?product_id='.$this->product->id)->assertOk()->assertJsonCount(1, 'data');
 });
 

@@ -11,7 +11,7 @@ class SaleReversal extends Model
 
     protected $fillable = ['store_id', 'sale_id', 'actor_user_id', 'actor_name_snapshot', 'request_key', 'request_hash',
         'kind', 'reason', 'restock', 'total_centavos', 'cash_refund_centavos', 'credit_reversed_centavos',
-        'balance_before_centavos', 'balance_after_centavos'];
+        'balance_before_centavos', 'balance_after_centavos', 'created_at'];
 
     protected function casts(): array
     {

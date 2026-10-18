@@ -2,9 +2,11 @@
 
 namespace App\Services\Catalog;
 
+use App\Exceptions\CheckoutConflict;
 use App\Models\InventoryMovement;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Stores\StoreWriteAccess;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -14,8 +16,8 @@ class StockAdjustment
     public function handle(Store $store, User $actor, array $attributes): array
     {
         return DB::transaction(function () use ($store, $actor, $attributes): array {
-            // Consistent lock order: store, product, inventory. Never trust a browser stock total.
-            Store::whereKey($store->id)->lockForUpdate()->firstOrFail();
+            // Lock account/store before product/inventory; never trust a browser stock total.
+            $store = StoreWriteAccess::lock($store);
             $requestKey = Str::lower($attributes['request_key']);
             $fingerprint = hash('sha256', json_encode([
                 (int) $attributes['product_id'], $attributes['mode'], (int) $attributes['quantity'],
@@ -23,20 +25,25 @@ class StockAdjustment
             ], JSON_THROW_ON_ERROR));
             $previous = $store->inventoryMovements()->where('request_key', $requestKey)->first();
             if ($previous) {
-                abort_unless(hash_equals($previous->request_hash, $fingerprint), 409,
-                    'This adjustment key was already used with different details. Start a new adjustment.');
+                if (! hash_equals($previous->request_hash, $fingerprint)) {
+                    throw new CheckoutConflict('adjustment_key_conflict',
+                        'This adjustment key was already used with different details. Review the saved movement before adjusting again.');
+                }
 
                 return $this->result($previous, true);
             }
 
             $product = $store->products()->whereKey($attributes['product_id'])->lockForUpdate()->firstOrFail();
-            abort_unless($product->status === 'active', 409, 'Restore this product before adjusting its stock.');
+            if ($product->status !== 'active') {
+                throw new CheckoutConflict('product_archived', 'Restore this product before adjusting its stock.');
+            }
             $inventory = $product->inventory()->lockForUpdate()->firstOrFail();
             $before = $inventory->quantity_on_hand;
             $quantity = (int) $attributes['quantity'];
             if ($attributes['mode'] === 'set') {
-                abort_unless($inventory->version === (int) $attributes['expected_version'], 409,
-                    'Stock changed since you opened this form. Reload inventory and count again.');
+                if ($inventory->version !== (int) $attributes['expected_version']) {
+                    throw new CheckoutConflict('stock_changed', 'Stock changed since you opened this form. Reload inventory and count again.');
+                }
                 $after = $quantity;
             } else {
                 $after = $before + ($attributes['mode'] === 'remove' ? -$quantity : $quantity);

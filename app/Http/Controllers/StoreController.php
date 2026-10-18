@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Settings\StoreSettingsRequest;
 use App\Http\Resources\AuthUserResource;
 use App\Models\Store;
+use App\Services\Stores\StoreWriteAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -13,7 +14,7 @@ class StoreController extends Controller
     public function update(StoreSettingsRequest $request, Store $store): AuthUserResource
     {
         DB::transaction(function () use ($request, $store) {
-            $locked = Store::whereKey($store->id)->lockForUpdate()->firstOrFail();
+            $locked = StoreWriteAccess::lock($store);
             $input = $request->validated();
             $locked->update(['name' => trim($input['name']), 'address' => $input['address'], 'phone' => $input['phone']]);
         });

@@ -4,6 +4,7 @@ namespace App\Services\Customers;
 
 use App\Exceptions\CheckoutConflict;
 use App\Models\Store;
+use App\Services\Stores\StoreWriteAccess;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -12,7 +13,7 @@ class CreateCustomer
     public function handle(Store $store, array $input): array
     {
         return DB::transaction(function () use ($store, $input): array {
-            Store::whereKey($store->id)->lockForUpdate()->firstOrFail();
+            $store = StoreWriteAccess::lock($store);
             $key = Str::lower($input['request_key']);
             $attributes = ['name' => $input['name'], 'phone' => $input['phone'] ?? null, 'notes' => $input['notes'] ?? null];
             $hash = hash('sha256', json_encode($attributes, JSON_THROW_ON_ERROR));

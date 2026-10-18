@@ -4,6 +4,7 @@ namespace App\Services\Catalog;
 
 use App\Models\Category;
 use App\Models\Store;
+use App\Services\Stores\StoreWriteAccess;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -13,7 +14,7 @@ class CategoryWriter
     public function save(Store $store, array $attributes, ?Category $category = null): Category
     {
         return DB::transaction(function () use ($store, $attributes, $category): Category {
-            Store::whereKey($store->id)->lockForUpdate()->firstOrFail();
+            $store = StoreWriteAccess::lock($store);
             $category = $category ? $store->categories()->whereKey($category->id)->lockForUpdate()->firstOrFail() : $store->categories()->make();
             if (isset($attributes['name'])) {
                 $attributes['name_key'] = Str::lower(trim($attributes['name']));

@@ -7,6 +7,20 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## API environment setup
+
+This API uses native Laravel environments: `local` for this workstation, `development` for a shared development server, and `production` for the live installation. Each installation has its own full `.env`; credential-free templates are `.env.example`, `.env.development.example`, and `.env.production.example`.
+
+See [ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md) for setup, optional native `--env` profiles, configuration caching, Sanctum SPA domains, and isolated tests. The existing local database settings and app key are preserved. The API runs on port 8000; client/admin remain on ports 3000/3001.
+
+The default `composer test` uses isolated SQLite. See [MySQL concurrency checks](docs/MYSQL_CONCURRENCY.md) for the guarded opt-in InnoDB suite and independent repository CI workflows. See [operations](docs/OPERATIONS.md) for deployment, key preservation, backups, restore drills, and performance validation.
+
+See [architecture](docs/ARCHITECTURE.md) for request/service boundaries, tenant access, financial history, frontend recovery, and the rules to preserve when adding a feature.
+
+Daily [Cash Closing](CASH_CLOSING_SETUP.md) adds opening cash, audited cash-in/out, actual-versus-expected review, immutable final closings, and safe retry recovery. The owner page is `/cash-closing`.
+
+Admin [account/store status management](ADMIN_STATUS_SETUP.md) adds reviewed suspension/reactivation, immutable audit history, and transactional workspace access enforcement without changing child-store statuses or private financial records.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
