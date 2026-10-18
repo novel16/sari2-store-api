@@ -25,17 +25,17 @@ class PlanController extends Controller
 
     public function store(PlanRequest $request, SavePlan $save): JsonResponse
     {
-        return (new PlanResource($save->handle($request->validated(), actorId: $request->user()->id)))
+        return (new PlanResource($save->handle($request->validated(), actorId: $request->user()->id, expectedActor: $request->user())))
             ->response()->setStatusCode(201);
     }
 
     public function update(PlanRequest $request, Plan $plan, SavePlan $save): PlanResource
     {
-        return new PlanResource($save->handle($request->validated(), $plan, $request->user()->id));
+        return new PlanResource($save->handle($request->validated(), $plan, $request->user()->id, $request->user()));
     }
 
     public function versions(Plan $plan): AnonymousResourceCollection
     {
-        return PlanVersionResource::collection($plan->versions()->with('actor:id,name')->orderByDesc('version')->paginate(20));
+        return PlanVersionResource::collection($plan->versions()->orderByDesc('version')->paginate(20));
     }
 }

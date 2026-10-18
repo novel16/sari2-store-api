@@ -19,6 +19,7 @@ Local settings:
 ```dotenv
 APP_URL=http://localhost:8000
 FRONTEND_URL=http://localhost:3000
+ADMIN_URL=http://localhost:3001
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
 SANCTUM_STATEFUL_DOMAINS=localhost:3000,localhost:3001
 SESSION_DRIVER=database
@@ -56,7 +57,7 @@ The Free product cap defaults to the proposed 100 via `FREE_PRODUCT_LIMIT` when 
 
 ## Password recovery and mail
 
-Reset links point to `FRONTEND_URL/reset-password?token=...&email=...` and expire after the configured broker lifetime (60 minutes by default). Invalid or consumed links are rejected. A successful reset rotates the remember token, deletes the user's stored sessions/API tokens, and invalidates session password hashes.
+Reset links use the saved user's role: owners/non-admin users go to `FRONTEND_URL/reset-password?token=...&email=...`; platform administrators go to `ADMIN_URL/reset-password?token=...&email=...`. Request origins and submitted redirects cannot replace those configured bases. Links expire after the configured broker lifetime (60 minutes by default); invalid or consumed links are rejected. A successful reset rotates the remember token, deletes the target user's stored sessions/API tokens, and invalidates session password hashes. Administrator resets also advance their session revision to reject older non-database sessions. See [admin password recovery](ADMIN_PASSWORD_RECOVERY_SETUP.md).
 
 With `MAIL_MAILER=log`, local reset emails appear in `storage/logs/laravel.log`; no external email is delivered. Configure your own mail transport to enable delivery. Forgot-password responses intentionally do not disclose whether an address is registered or mail delivery failed; delivery errors are logged server-side.
 
@@ -68,7 +69,7 @@ No public admin registration or default admin password is provided. Provision a 
 php artisan app:create-platform-admin
 ```
 
-The admin frontend itself is outside this client-auth task.
+The independent admin frontend provides its own login and recovery pages on port 3001, using the shared session and password-broker APIs.
 
 ## Verification
 

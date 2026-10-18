@@ -10,7 +10,7 @@ function apiEnvironmentTemplate(string $file): array
 
 it('provides complete environment templates without application keys or database credentials', function (string $file, string $environment) {
     $values = apiEnvironmentTemplate($file);
-    foreach (['APP_ENV', 'APP_KEY', 'APP_DEBUG', 'APP_URL', 'FRONTEND_URL', 'CORS_ALLOWED_ORIGINS',
+    foreach (['APP_ENV', 'APP_KEY', 'APP_DEBUG', 'APP_URL', 'FRONTEND_URL', 'ADMIN_URL', 'CORS_ALLOWED_ORIGINS',
         'SANCTUM_STATEFUL_DOMAINS', 'DB_CONNECTION', 'DB_URL', 'DB_HOST', 'DB_PORT', 'DB_DATABASE',
         'DB_USERNAME', 'DB_PASSWORD', 'SESSION_DRIVER', 'SESSION_DOMAIN', 'SESSION_SECURE_COOKIE',
         'SESSION_SAME_SITE', 'QUEUE_CONNECTION', 'CACHE_STORE', 'MAIL_MAILER', 'FREE_PRODUCT_LIMIT'] as $name) {
@@ -32,6 +32,7 @@ it('keeps remote templates private by default with matching HTTPS SPA cookie dom
     expect($values['LOG_STACK'])->toBe('daily');
     $origins = explode(',', $values['CORS_ALLOWED_ORIGINS']);
     expect($origins)->toContain($values['FRONTEND_URL']);
+    expect($origins)->toContain($values['ADMIN_URL']);
     expect($values['CORS_ALLOWED_ORIGINS'])->not->toContain('*');
     $hosts = [];
     foreach ([$values['APP_URL'], ...$origins] as $origin) {

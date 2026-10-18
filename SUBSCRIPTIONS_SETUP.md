@@ -8,6 +8,8 @@ Open Admin → Accounts → account details → **Manage subscription** on port 
 
 Activation saves a new dated subscription with the matching `plan_version_id` and an audit record in one transaction. The audit snapshots the account name, plan version/terms, duration, exact period, amount/reference, reason, and administrator identity. Existing periods are retained. Publishing Basic alone does not activate or charge an account.
 
+The separate admin **Subscriptions** directory monitors all accounts and links back to this management flow. It merges contiguous prepaid coverage when calculating 7/30-day expiry, keeping future restarts and account suspension distinct. See [subscription monitoring](SUBSCRIPTION_MONITORING_SETUP.md) for state definitions, filters, queries, and its additive index migration.
+
 ## Workflow and rules
 
 1. Choose 1–12 calendar months of the published Basic offer.

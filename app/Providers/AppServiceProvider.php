@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\Auth\PasswordResetUrl;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -27,10 +28,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Model::preventLazyLoading(! $this->app->isProduction());
 
-        ResetPassword::createUrlUsing(fn ($user, string $token) => rtrim(config('app.frontend_url'), '/').'/reset-password?'.http_build_query([
-            'token' => $token,
-            'email' => $user->getEmailForPasswordReset(),
-        ]));
+        ResetPassword::createUrlUsing(fn ($user, string $token) => app(PasswordResetUrl::class)->forUser($user, $token));
 
         RateLimiter::for('auth-login', function (Request $request): array {
             $email = $request->input('email');

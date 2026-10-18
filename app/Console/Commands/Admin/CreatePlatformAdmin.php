@@ -4,13 +4,13 @@ namespace App\Console\Commands\Admin;
 
 use App\Models\User;
 use App\Rules\PasswordInput;
+use App\Services\Admin\Administrators\AdministratorService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 
 class CreatePlatformAdmin extends Command
 {
@@ -18,7 +18,7 @@ class CreatePlatformAdmin extends Command
 
     protected $description = 'Securely provision a new platform administrator using interactive prompts';
 
-    public function handle(): int
+    public function handle(AdministratorService $administrators): int
     {
         if (! $this->input->isInteractive()) {
             $this->error('Run this command interactively. Administrator passwords are accepted only through hidden prompts.');
@@ -53,16 +53,17 @@ class CreatePlatformAdmin extends Command
             return self::SUCCESS;
         }
 
-        DB::transaction(function () use ($attributes): void {
-            $user = new User;
-            $user->fill([
-                'name' => $attributes['name'],
-                'email' => $attributes['email'],
-                'password' => Hash::make($attributes['password']),
-            ]);
-            $user->forceFill(['platform_role' => 'platform_admin', 'status' => 'active']);
-            $user->save();
-        });
+        try {
+            $administrators->provisionFromConsole($attributes);
+        } catch (ValidationException $error) {
+            foreach ($error->errors() as $messages) {
+                foreach ($messages as $message) {
+                    $this->error($message);
+                }
+            }
+
+            return self::FAILURE;
+        }
 
         $this->info('Platform administrator created. Sign in through the administrator login endpoint.');
 

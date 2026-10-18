@@ -10,7 +10,7 @@ class PlanVersion extends Model
 {
     public const UPDATED_AT = null;
 
-    protected $fillable = ['plan_id', 'version', 'terms', 'actor_user_id', 'change_note'];
+    protected $fillable = ['plan_id', 'version', 'terms', 'actor_user_id', 'actor_name_snapshot', 'change_note'];
 
     protected function casts(): array
     {

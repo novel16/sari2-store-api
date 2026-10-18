@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\Admin\SubscriptionActivation;
 use App\Models\Plan;
 use App\Models\User;
+use App\Services\Admin\AdministratorAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,11 @@ class ActivateSubscription
             return DB::transaction(function () use ($account, $actor, $input, $payload, $quoteHash, $requestHash) {
                 // Same account lock as catalog writes: quota and subscription changes serialize.
                 $account = Account::whereKey($account->id)->lockForUpdate()->firstOrFail();
+                $review = $payload['proposal'];
+                // Catalog writers take plan before administrator; keep that order
+                // while checking an actor who may have just been suspended.
+                $plan = Plan::whereKey($review['plan_id'])->lockForUpdate()->firstOrFail();
+                $actor = AdministratorAccess::lock($actor);
                 $previous = SubscriptionActivation::where('request_key', $input['request_key'])->first();
                 if ($previous) {
                     abort_unless(hash_equals($previous->request_hash, $requestHash), 409, 'This request key was used for different details. Check history before retrying.');
@@ -31,9 +37,6 @@ class ActivateSubscription
                 }
                 abort_if(SubscriptionActivation::where('quote_hash', $quoteHash)->exists(), 409, 'This review was already confirmed. Refresh the subscription history.');
                 abort_if(CarbonImmutable::parse($payload['expires_at'])->lte(now()), 409, 'This review expired. Review the subscription again.');
-                $review = $payload['proposal'];
-                // Lock the catalog before inspecting/writing paid periods; SavePlan locks this row too.
-                $plan = Plan::whereKey($review['plan_id'])->lockForUpdate()->firstOrFail();
                 abort_unless($plan->version === $review['plan_version'], 409, 'The plan changed after review. Refresh and review the current price and allowances.');
                 $current = $this->proposals->build($account, $plan, $review['months'], CarbonImmutable::parse($payload['reviewed_at']));
                 abort_unless($current === $review, 409, 'The account or subscription changed after review. Refresh and review again.');

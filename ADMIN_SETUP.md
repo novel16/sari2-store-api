@@ -29,6 +29,14 @@ Run interactively, enter the administrator's name/email, provide and confirm the
 
 Only `platform_role = platform_admin` **and** `status = active` may access this area. No store membership is needed for a platform administrator. An administrator's platform role does not grant access to private store APIs.
 
+After the first administrator is provisioned, the **Administrators** screen supports independent administrator creation and reviewed suspension/reactivation, with self/last-active safeguards, immutable history, and session revocation. **My profile** handles the signed-in administrator's identity/password. See [administrator management](ADMIN_USERS_SETUP.md) for the endpoints, credential/recovery policy, migration, and checks.
+
+The **Activity log** screen combines existing platform audit records, with snapshot names, filters, cursor pagination, and related detail links. See [activity setup](ADMIN_ACTIVITY_SETUP.md) for its additive migration, supported sources, and attribution rules.
+
+The **Subscriptions** screen monitors coverage across accounts, including contiguous prepaid renewals, expiring/expired/Free states, and account status. See [monitoring setup](SUBSCRIPTION_MONITORING_SETUP.md) for definitions and the index migration.
+
+The admin login also provides **Forgot password?**, with role-based email links back to the admin app and revocation of prior sessions after reset. See [password recovery](ADMIN_PASSWORD_RECOVERY_SETUP.md) for mail configuration, expiry, and completion behavior.
+
 ## API contract
 
 Authentication remains on the shared, already rate-limited session endpoints:
@@ -38,6 +46,8 @@ Authentication remains on the shared, already rate-limited session endpoints:
 | GET | `/sanctum/csrf-cookie` | Issue CSRF cookie |
 | POST | `/admin/login` | Authenticate an eligible administrator |
 | POST | `/logout` | End the current browser session |
+| POST | `/forgot-password` | Request a generic reset notification using the shared broker |
+| POST | `/reset-password` | Reset credentials with a valid one-use token; revoke prior access |
 
 All following routes inherit `auth:sanctum`, `active.user`, and `platform.admin`:
 
@@ -45,6 +55,8 @@ All following routes inherit `auth:sanctum`, `active.user`, and `platform.admin`
 | --- | --- | --- |
 | GET | `/api/v1/admin/me` | Current administrator identity |
 | GET | `/api/v1/admin/dashboard` | Live counts, 30 daily registration buckets, latest five accounts/stores |
+| GET | `/api/v1/admin/activity` | Filtered, cursor-paginated timeline of recorded platform changes |
+| GET | `/api/v1/admin/subscriptions` | Searchable cross-account coverage, expiry filters, summary counts and scheduled renewals |
 | GET | `/api/v1/admin/accounts` | Searchable/paginated account metadata |
 | GET | `/api/v1/admin/accounts/{account}` | Account owner, status, registration dates, member/store counts |
 | GET | `/api/v1/admin/stores` | Searchable/paginated store metadata |

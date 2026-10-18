@@ -16,6 +16,8 @@ class UpdateAccount
         try {
             $saved = DB::transaction(function () use ($actor, $input, $sessionId) {
                 $user = User::whereKey($actor->id)->lockForUpdate()->firstOrFail();
+                abort_unless($user->status === 'active', 403, 'Your account is unavailable. Please contact support.');
+                $this->ensureCurrentAdministrator($user, $actor);
                 $emailChanged = $user->email !== $input['email'];
                 if ($emailChanged) {
                     $this->verifyPassword($user, $input['current_password'] ?? '');
@@ -40,6 +42,8 @@ class UpdateAccount
     {
         $saved = DB::transaction(function () use ($actor, $input, $sessionId) {
             $user = User::whereKey($actor->id)->lockForUpdate()->firstOrFail();
+            abort_unless($user->status === 'active', 403, 'Your account is unavailable. Please contact support.');
+            $this->ensureCurrentAdministrator($user, $actor);
             $this->verifyPassword($user, $input['current_password']);
             $user->forceFill(['password' => Hash::make($input['password']), 'remember_token' => Str::random(60)])->save();
             DB::table('password_reset_tokens')->where('email', $user->email)->delete();
@@ -48,6 +52,12 @@ class UpdateAccount
             return $user;
         });
         $actor->setRawAttributes($saved->getAttributes(), true);
+    }
+
+    private function ensureCurrentAdministrator(User $user, User $actor): void
+    {
+        abort_if($user->isPlatformAdmin() && (int) $actor->admin_status_revision !== (int) $user->admin_status_revision,
+            403, 'Your administrator access changed. Sign in again before continuing.');
     }
 
     private function verifyPassword(User $user, string $password): void

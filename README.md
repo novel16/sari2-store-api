@@ -21,6 +21,14 @@ Daily [Cash Closing](CASH_CLOSING_SETUP.md) adds opening cash, audited cash-in/o
 
 Admin [account/store status management](ADMIN_STATUS_SETUP.md) adds reviewed suspension/reactivation, immutable audit history, and transactional workspace access enforcement without changing child-store statuses or private financial records.
 
+[Administrator management](ADMIN_USERS_SETUP.md) adds independent platform-admin creation, a searchable directory, reviewed status changes with self/last-admin safeguards, immutable history, and own profile/password settings.
+
+[Centralized administrator activity](ADMIN_ACTIVITY_SETUP.md) combines recorded administrator, account/store status, plan-version, and subscription history into a searchable read-only timeline with cursor navigation and historical name attribution.
+
+[Subscription monitoring](SUBSCRIPTION_MONITORING_SETUP.md) adds a cross-account admin directory with summary counts, effective-plan and 7/30-day expiry filters, continuous prepaid coverage, scheduled renewals, and links to existing manual management.
+
+[Admin password recovery](ADMIN_PASSWORD_RECOVERY_SETUP.md) adds Forgot/Reset Password pages, trusted role-based owner/admin email links, and revocation of previous administrator sessions through the shared Laravel broker.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

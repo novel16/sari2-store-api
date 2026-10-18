@@ -3,12 +3,14 @@
 namespace Tests\Concurrency;
 
 use App\Models\Account;
+use App\Models\Admin\AdministratorEvent;
 use App\Models\Admin\StatusChange;
 use App\Models\Admin\SubscriptionActivation;
 use App\Models\CreditLedgerEntry;
 use App\Models\Plan;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Admin\Administrators\AdministratorService;
 use App\Services\Admin\Status\StatusChangeService;
 use App\Services\Admin\Subscriptions\ActivateSubscription;
 use App\Services\Admin\Subscriptions\SubscriptionQuote;
@@ -22,6 +24,7 @@ use App\Services\Sales\CompleteSale;
 use Carbon\CarbonImmutable;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
@@ -243,6 +246,59 @@ class MySqlConcurrencyTest extends TestCase
         } catch (HttpExceptionInterface $error) {
             $this->assertSame(403, $error->getStatusCode());
         }
+    }
+
+    public function test_mutual_administrator_suspensions_cannot_commit_after_the_actor_loses_access(): void
+    {
+        $admins = User::factory()->count(2)->create(['platform_role' => 'platform_admin', 'status' => 'active',
+            'password' => Hash::make('race-admin-password-123')]);
+        $administrators = app(AdministratorService::class);
+        $tasks = [];
+        foreach ([[0, 1], [1, 0]] as [$actorIndex, $targetIndex]) {
+            $actor = $admins[$actorIndex];
+            $target = $admins[$targetIndex];
+            $review = $administrators->previewStatus($target, $actor, [
+                'status' => 'suspended', 'reason' => 'Mutual suspension concurrency verification',
+            ]);
+            $tasks[] = ['operation' => 'administrator_status', 'actor_id' => $actor->id,
+                'administrator_id' => $target->id, 'input' => ['request_key' => (string) Str::uuid(),
+                    'review_token' => $review['review_token'], 'current_password' => 'race-admin-password-123']];
+        }
+
+        $results = $this->race('admin_management_locks', 1, $tasks);
+
+        $this->assertSame([200, 403], $this->statuses($results));
+        $this->assertSame(1, User::whereKey($admins->modelKeys())->where('status', 'active')->count());
+        $this->assertSame(1, User::whereKey($admins->modelKeys())->where('status', 'suspended')->count());
+        $this->assertSame(1, AdministratorEvent::whereIn('administrator_user_id', $admins->modelKeys())->count());
+        $this->assertGreaterThanOrEqual(1, User::where('platform_role', 'platform_admin')->where('status', 'active')->count());
+    }
+
+    public function test_concurrent_retries_create_one_independent_administrator_and_one_audit_event(): void
+    {
+        $actor = User::factory()->create(['platform_role' => 'platform_admin', 'status' => 'active',
+            'password' => Hash::make('race-admin-password-123')]);
+        $email = 'new-race-admin-'.Str::uuid().'@example.test';
+        $review = app(AdministratorService::class)->previewCreate($actor, [
+            'name' => 'Race administrator', 'email' => $email, 'reason' => 'Concurrent creation recovery verification',
+        ]);
+        $key = (string) Str::uuid();
+        $task = ['operation' => 'administrator_create', 'actor_id' => $actor->id,
+            'input' => ['request_key' => $key, 'review_token' => $review['review_token'],
+                'current_password' => 'race-admin-password-123', 'password' => 'new-race-admin-password-123']];
+
+        $results = $this->race('admin_management_locks', 1, [$task, $task]);
+
+        $this->assertSame([200, 200], $this->statuses($results));
+        $replayed = array_column($results, 'replayed');
+        sort($replayed);
+        $this->assertSame([false, true], $replayed);
+        $this->assertSame(1, User::where('email', $email)->count());
+        $created = User::where('email', $email)->sole();
+        $this->assertSame('platform_admin', $created->platform_role);
+        $this->assertSame(0, $created->memberships()->count());
+        $this->assertSame(1, AdministratorEvent::where('request_key', $key)->count());
+        $this->assertTrue(Hash::check('new-race-admin-password-123', $created->password));
     }
 
     private function statuses(array $results): array

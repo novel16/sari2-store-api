@@ -7,6 +7,7 @@ use App\Models\Account;
 use App\Models\Admin\StatusChange;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Admin\AdministratorAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -107,12 +108,7 @@ class StatusChangeService
 
     private function actor(User $actor, bool $lock = false): User
     {
-        $current = User::whereKey($actor->id)->when($lock, fn (Builder $query) => $query->lockForUpdate())->first();
-        if (! $current || ! $current->isPlatformAdmin() || $current->status !== 'active') {
-            $this->conflict('status_actor_unavailable', 'An active platform administrator is required for this action.');
-        }
-
-        return $current;
+        return $lock ? AdministratorAccess::lock($actor) : AdministratorAccess::fresh($actor);
     }
 
     private function canChange(Account|Store $target, Account $account, string $status): void

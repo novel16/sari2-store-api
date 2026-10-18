@@ -7,6 +7,7 @@ use App\Models\CashDay;
 use App\Models\Customer;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Admin\Administrators\AdministratorService;
 use App\Services\Admin\Status\StatusChangeService;
 use App\Services\Admin\Subscriptions\ActivateSubscription;
 use App\Services\Cash\CashDayService;
@@ -36,6 +37,7 @@ try {
     $customer = isset($task['customer_id']) ? Customer::findOrFail($task['customer_id']) : null;
     $account = isset($task['account_id']) ? Account::findOrFail($task['account_id']) : null;
     $cashDay = isset($task['cash_day_id']) ? CashDay::findOrFail($task['cash_day_id']) : null;
+    $administrator = isset($task['administrator_id']) ? User::findOrFail($task['administrator_id']) : null;
     DB::connection()->beforeExecuting(function (string $sql) use ($task): void {
         if (str_contains(strtolower($sql), 'for update')) {
             file_put_contents($task['directory'].'/'.$task['worker'].'.attempting', '1');
@@ -55,6 +57,8 @@ try {
         'subscription' => app(ActivateSubscription::class)->handle($account, $actor, $task['input']),
         'cash_close' => app(CashDayService::class)->close($store, $cashDay, $actor, $task['input']),
         'status_change' => app(StatusChangeService::class)->change($task['target_type'] === 'account' ? $account : $store, $actor, $task['input']),
+        'administrator_status' => app(AdministratorService::class)->changeStatus($administrator, $actor, $task['input']),
+        'administrator_create' => app(AdministratorService::class)->create($actor, $task['input']),
         default => throw new RuntimeException('Unknown concurrency operation.'),
     };
     echo json_encode(['status' => 200, 'replayed' => $result['replayed']], JSON_THROW_ON_ERROR);

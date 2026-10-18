@@ -18,6 +18,7 @@ class ProfileSettingsRequest extends AuthRequest
             'id' => ['prohibited'], 'user_id' => ['prohibited'], 'account_id' => ['prohibited'],
             'store_id' => ['prohibited'], 'platform_role' => ['prohibited'], 'role' => ['prohibited'],
             'status' => ['prohibited'], 'email_verified_at' => ['prohibited'], 'password' => ['prohibited'],
+            'admin_status_revision' => ['prohibited'],
         ];
     }
 }

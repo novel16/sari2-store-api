@@ -2,16 +2,32 @@
 
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\AccountSubscriptionController;
+use App\Http\Controllers\Admin\ActivityController;
+use App\Http\Controllers\Admin\AdministratorController;
+use App\Http\Controllers\Admin\AdministratorSettingsController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\StatusChangeController;
 use App\Http\Controllers\Admin\StoreController;
+use App\Http\Controllers\Admin\SubscriptionMonitoringController;
 use App\Http\Controllers\CurrentUserController;
 use Illuminate\Support\Facades\Route;
 
 // Inherits /api/v1/admin and the authenticated, active platform admin middleware.
 Route::get('/me', CurrentUserController::class);
+Route::patch('/profile', [AdministratorSettingsController::class, 'profile'])->middleware('throttle:6,1,administrator-settings:');
+Route::patch('/password', [AdministratorSettingsController::class, 'password'])->middleware('throttle:6,1,administrator-settings:');
+Route::get('/administrators', [AdministratorController::class, 'index']);
+Route::get('/administrators/operations/by-key/{key}', [AdministratorController::class, 'byKey']);
+Route::post('/administrators/creation-preview', [AdministratorController::class, 'creationPreview'])->middleware('throttle:30,1,administrator-review:');
+Route::post('/administrators', [AdministratorController::class, 'store'])->middleware('throttle:6,1,administrator-confirmation:');
+Route::get('/administrators/{administrator}', [AdministratorController::class, 'show'])->whereNumber('administrator');
+Route::get('/administrators/{administrator}/history', [AdministratorController::class, 'history'])->whereNumber('administrator');
+Route::post('/administrators/{administrator}/status-preview', [AdministratorController::class, 'statusPreview'])->whereNumber('administrator')->middleware('throttle:30,1,administrator-review:');
+Route::post('/administrators/{administrator}/status-changes', [AdministratorController::class, 'changeStatus'])->whereNumber('administrator')->middleware('throttle:6,1,administrator-confirmation:');
 Route::get('/dashboard', DashboardController::class);
+Route::get('/activity', ActivityController::class);
+Route::get('/subscriptions', SubscriptionMonitoringController::class);
 Route::get('/accounts', [AccountController::class, 'index']);
 Route::get('/accounts/{account}', [AccountController::class, 'show'])->whereNumber('account');
 Route::get('/accounts/{account}/status-history', [StatusChangeController::class, 'accountHistory'])->whereNumber('account');

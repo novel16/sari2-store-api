@@ -35,7 +35,6 @@ class Account extends Model
     public function currentSubscription(): HasOne
     {
         return $this->hasOne(Subscription::class)->ofMany(['id' => 'max'], fn (Builder $query) => $query
-            ->where('status', 'active')->where('starts_at', '<=', now())
-            ->where(fn (Builder $ends) => $ends->whereNull('ends_at')->orWhere('ends_at', '>', now())));
+            ->coveringAt(now()));
     }
 }

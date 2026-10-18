@@ -15,6 +15,7 @@ class ChangePasswordRequest extends AuthRequest
             'password' => ['bail', 'required', 'string', new PasswordInput, 'confirmed', 'different:current_password', Password::min(8)],
             'user_id' => ['prohibited'], 'id' => ['prohibited'], 'account_id' => ['prohibited'],
             'store_id' => ['prohibited'], 'platform_role' => ['prohibited'], 'status' => ['prohibited'],
+            'admin_status_revision' => ['prohibited'],
         ];
     }
 }

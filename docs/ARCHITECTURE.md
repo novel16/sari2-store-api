@@ -24,6 +24,8 @@ Platform administrators are independent users; creating one does not create a st
 
 Composite tenant foreign keys and store-scoped unique constraints reinforce service checks. Preserve these when adding tables or relationships. The client and admin currently share a cookie identity when using the same browser/session domain; role enforcement remains the API's responsibility.
 
+Platform-admin roster changes use a singleton roster lock before user rows in ID order. Other privileged writes keep their domain lock order (account/store or plan, then actor user) and recheck active administrator status and revision under that user lock. They do not acquire the roster lock after a domain lock. Login/session revisions prevent revoked sessions from returning after reactivation; see [administrator management](../ADMIN_USERS_SETUP.md).
+
 Sale, stock, customer ledger, subscription, cash-closing, and administrative status history preserve recorded facts. Store monetary amounts as integer centavos. Return totals as decimal strings when they can exceed JavaScript's safe integer range, and use exact integer arithmetic in the clients. Keep historical names, prices, units, and terms in snapshots where already defined.
 
 Choose a product's unit at creation. Once stock or history exists, changing the label would reinterpret quantities; create a distinct product for a different unit. A legacy sale-unit mismatch cannot be automatically restocked. Financial reversal without restock remains available; see [catalog](../CATALOG_SETUP.md) and [reversals](../OPERATIONS_SETUP.md).
@@ -33,6 +35,10 @@ Choose a product's unit at creation. Once stock or history exists, changing the 
 Workspace writes use `Services/Stores/StoreWriteAccess` inside their transaction to lock the account, then the store, and recheck both statuses before changing data. They then lock the customer/product/inventory rows they modify. Admin account/store status changes coordinate on the same account-first order, so a request admitted before suspension cannot bypass a later committed restriction. Catalog quota and subscription writes also coordinate on the account lock. Preserve this lock order and transactional audit writes when extending those actions. Use batch reads/locks for collections rather than a relationship query inside an item loop. See [status management](../ADMIN_STATUS_SETUP.md).
 
 Eager-load the relationships a response will render, paginate lists, and keep tenant/filter predicates in SQL. Query-count tests check that reads do not grow with returned rows or checkout items. They complement indexes and measurements; they do not establish a production latency or capacity guarantee.
+
+The centralized admin Activity Log reads the four existing audit sources with SQL filters before a union of small headers. Cursor pagination precedes at most four batched source reads; resources expose explicit audit metadata. Names use historical snapshots, with an honest missing-name label for legacy plan actors. This is a live ordered feed, not a frozen report. Do not duplicate source events into a second audit table or infer unrecorded actions; see [activity setup](../ADMIN_ACTIVITY_SETUP.md).
+
+Subscription monitoring uses the shared current-validity scope, SQL interval windows to merge continuous remaining paid periods, and SQL search/state filters before pagination. Fixed batches hydrate only the selected current/next plan snapshots, avoiding per-account effective-plan queries. Expiring is an overlapping flag within current paid states, while account suspension remains separate. See [monitoring setup](../SUBSCRIPTION_MONITORING_SETUP.md).
 
 Read-only customer statements capture their upper immutable ledger ID and balance while holding the short store lock. Aggregation and pagination then run after that transaction ends, bounded by the captured ID. Do not put slow reports or exports inside a financial write lock when a stable immutable snapshot can be used instead.
 
@@ -49,7 +55,7 @@ For non-repeatable writes, persist the exact request and its idempotency key **b
 | Check | Purpose |
 | --- | --- |
 | Default API suite | Isolated SQLite validation, tenant/auth rules, domain behavior, rollback and query growth |
-| Opt-in MySQL suite | Real overlapping checkout, repayment, activation, renewal, final cash closing and account/store suspension in a disposable schema |
+| Opt-in MySQL suite | Real overlapping checkout, repayment, activation, renewal, cash closing, account/store suspension, mutual admin suspension and admin creation retries; Activity union/JSON/cursor SQL compatibility in a disposable schema |
 | Client/admin `npm test` | Automatic suite discovery, exact arithmetic/recovery helpers, HTTP adapters and mounted React failure flows |
 | Pint, ESLint and builds | Formatting, source checks, strict typing and production bundle verification |
 

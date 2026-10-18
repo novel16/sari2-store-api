@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\AuthUserResource;
 use App\Models\User;
+use App\Services\Admin\AdministratorSession;
 use App\Services\Auth\LoginEligibility;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -63,6 +64,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
         $user = Auth::guard('web')->user();
         $request->session()->put('password_hash_web', $user->getAuthPassword());
+        AdministratorSession::record($request, $user);
 
         return new AuthUserResource($user);
     }

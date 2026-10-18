@@ -24,10 +24,16 @@ class ResetUserPassword
                 ]);
             }
 
-            $lockedUser->forceFill([
+            $credentials = [
                 'password' => Hash::make($password),
                 'remember_token' => Str::random(60),
-            ])->save();
+            ];
+            if ($lockedUser->isPlatformAdmin()) {
+                // Database-session deletion alone cannot revoke older file/cache/cookie
+                // sessions. The existing administrator session check rejects this epoch.
+                $credentials['admin_status_revision'] = (int) $lockedUser->admin_status_revision + 1;
+            }
+            $lockedUser->forceFill($credentials)->save();
 
             DB::connection(config('session.connection'))
                 ->table(config('session.table', 'sessions'))
