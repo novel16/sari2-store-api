@@ -2,6 +2,7 @@
 
 Open Admin → Accounts → account details → **Manage subscription** on port 3001. Only active platform administrators can confirm a period. Administrators remain independent of the owner's account and store membership.
 
+This document describes the retained administrator manual/complimentary flow. Owners can now purchase or renew Basic directly through PayMongo QR Ph, with automatic fulfillment after a verified webhook. See [PayMongo setup](PAYMONGO_SETUP.md) for the public callback URL, configuration, payment states, background processing and ngrok test procedure. There is no owner subscription-request approval queue.
 ## Database
 
 `2026_10_16_210000_create_subscription_activations_table` adds an immutable audit table without changing existing subscriptions or store records. It has already been applied to the local database. For another environment, run `php artisan migrate`.
@@ -40,7 +41,7 @@ Confirmation accepts only the returned `quote` and a UUID `request_key`. The aut
 
 The UI prevents double submission and saves the review/key to per-administrator/account sessionStorage before sending. After a connection failure or same-tab reload/navigation, it restores the pending review and offers Retry confirmation for that exact request. It clears recovery only after a saved or definitive result, and does not silently create a new grant. No credentials are stored. Closing the tab or clearing browser storage removes this recovery data; check history before starting another grant if that happens.
 
-The owner endpoint `GET /api/v1/stores/{store}/subscription` adds `manual_activation_available` and `renewal` (manual mode, no auto-renewal, next period, scheduled count, last paid end). Billing checkout remains unavailable (`billing_available: false`). The owner screen shows expiry, upcoming saved terms, expired/expiring status, usage, and instructions to contact the service administrator. Private payment references, grant reasons, and administrator history stay in the admin API.
+The owner endpoint `GET /api/v1/stores/{store}/subscription` returns `manual_activation_available`, `renewal` (no automatic debit, next period, scheduled count, last paid end), readiness-based `billing_available`, and the account's unresolved `pending_order`. When PayMongo is configured, the owner screen offers a reviewed QR Ph checkout and safe payment status/history. Otherwise it explains that online payment is unavailable. Private manual payment references, grant reasons and administrator history stay in the admin API. See [PayMongo setup](PAYMONGO_SETUP.md) for the separate self-service order endpoints.
 
 ## Organization and verification
 
@@ -53,4 +54,4 @@ php artisan test --compact
 
 Tests cover authorization, exact settlement validation, grants, immutable snapshots, expiry/Free fallback, cash/utang/repayment access after expiry, Philippine month boundaries, scheduling, catalog changes, duplicate references, idempotent retries, tampered/stale reviews, rollback, and query scaling. The test database remains guarded SQLite `:memory:`.
 
-Automatic gateway payments, self-service requests, cancellations/refunds of subscription payments, and Plus/Pro activation are separate future work. POS still uses Cash and Utang only.
+Refunds of accepted subscription payments and Plus/Pro activation remain separate future work. Unpaid PayMongo checkout expiration and paid webhook fulfillment are covered by the self-service billing flow. POS still uses Cash and Utang only.

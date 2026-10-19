@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
         $middleware->authenticateSessions();
+        // PayMongo authenticates this exact public callback with its raw-body
+        // signature. Browser-origin detection must not turn it into a CSRF route.
+        $middleware->validateCsrfTokens(except: ['api/v1/webhooks/paymongo']);
         $middleware->alias([
             'active.user' => EnsureActiveUser::class,
             'platform.admin' => EnsurePlatformAdmin::class,

@@ -42,11 +42,11 @@ Subscriptions belong to the store-owner account, never the platform administrato
 
 Managed edits snapshot old paid terms before changing the catalog and attach all legacy subscriptions without a saved version in a single update. Existing paid subscribers continue using their saved prices and limits, including after catalog retirement. Free accounts follow the current Free allowance. Catalog history records version-zero legacy terms when first initialized.
 
-Manual Basic activation/renewal now assigns the matching saved version and appends reviewed periods after payment verification or a reasoned complimentary grant. See [manual subscriptions](SUBSCRIPTIONS_SETUP.md) for endpoints, audit and duplicate protection. Publishing a plan does not charge or upgrade anyone.
+Manual Basic activation/renewal assigns the matching saved version and appends reviewed periods after payment verification or a reasoned complimentary grant. Owners can also purchase Basic through [PayMongo QR Ph](PAYMONGO_SETUP.md); its server-priced order saves the purchased version, and only a verified webhook marks payment paid before automatic fulfillment. See [manual subscriptions](SUBSCRIPTIONS_SETUP.md) for retained administrator endpoints, audit and duplicate protection. Publishing a plan does not charge or upgrade anyone.
 
 ## Usage and quotas
 
-`GET /api/v1/stores/{store}/subscription` requires the existing owner/store authorization. It returns effective terms, usage, store/staff counts, public plans, manual renewal status, and `billing_available: false` (no online checkout). Drafts/retired offers are hidden; an existing subscriber can still see their own saved retired-plan terms.
+`GET /api/v1/stores/{store}/subscription` requires the existing owner/store authorization. It returns effective terms, usage, store/staff counts, public plans, renewal status, a readiness-based `billing_available` flag and the unresolved `pending_order`. Configured installations offer QR Ph checkout; missing/disabled payment configuration keeps checkout unavailable. Drafts/retired offers are hidden; an existing subscriber can still see their own saved retired-plan terms.
 
 Only active product entries count; stock quantity and archived products do not. Pro's account quota counts active entries across all stores in the account, including separate entries for the same item in different stores. Product creation/restoration takes an account lock before the existing store/product/inventory locks so simultaneous branches cannot consume the same final slot. Store-based allowances retain their previous behavior.
 

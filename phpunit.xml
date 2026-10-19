@@ -31,6 +31,11 @@
         <server name="DB_URL" value=""/>
         <server name="MAIL_MAILER" value="array"/>
         <server name="QUEUE_CONNECTION" value="sync"/>
+        <!-- Payment tests explicitly inject fake credentials; local keys stay isolated. -->
+        <server name="PAYMONGO_ENABLED" value="false"/>
+        <server name="PAYMONGO_MODE" value="test"/>
+        <server name="PAYMONGO_SECRET_KEY" value=""/>
+        <server name="PAYMONGO_WEBHOOK_SECRET" value=""/>
         <server name="SESSION_DRIVER" value="array"/>
         <server name="PULSE_ENABLED" value="false"/>
         <server name="TELESCOPE_ENABLED" value="false"/>
@@ -48,6 +53,10 @@
         <env name="DB_URL" value="" force="true"/>
         <env name="MAIL_MAILER" value="array" force="true"/>
         <env name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <env name="PAYMONGO_ENABLED" value="false" force="true"/>
+        <env name="PAYMONGO_MODE" value="test" force="true"/>
+        <env name="PAYMONGO_SECRET_KEY" value="" force="true"/>
+        <env name="PAYMONGO_WEBHOOK_SECRET" value="" force="true"/>
         <env name="SESSION_DRIVER" value="array" force="true"/>
         <env name="PULSE_ENABLED" value="false" force="true"/>
         <env name="TELESCOPE_ENABLED" value="false" force="true"/>

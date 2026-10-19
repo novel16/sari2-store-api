@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AccountSettingsController;
+use App\Http\Controllers\Billing\PayMongoWebhookController;
+use App\Http\Controllers\Billing\SubscriptionOrderController;
 use App\Http\Controllers\CashDayController;
 use App\Http\Controllers\CashMovementController;
 use App\Http\Controllers\CategoryController;
@@ -21,6 +23,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::get('/health', fn () => ['status' => 'ok', 'service' => 'Sari-sari Store POS']);
+    Route::post('/webhooks/paymongo', PayMongoWebhookController::class)
+        ->middleware('throttle:600,1,paymongo-webhook:');
 
     Route::middleware(['auth:sanctum', 'active.user'])->group(function () {
         Route::get('/me', CurrentUserController::class);
@@ -32,6 +36,11 @@ Route::prefix('v1')->group(function () {
             Route::get('/dashboard', DashboardController::class);
             Route::get('/reports/sales', SalesReportController::class);
             Route::get('/subscription', [SubscriptionController::class, 'show']);
+            Route::get('/subscription/orders', [SubscriptionOrderController::class, 'index']);
+            Route::post('/subscription/orders', [SubscriptionOrderController::class, 'store'])->middleware('throttle:12,1,subscription-checkout:');
+            Route::get('/subscription/orders/by-key/{key}', [SubscriptionOrderController::class, 'byKey'])->whereUuid('key');
+            Route::get('/subscription/orders/{order}', [SubscriptionOrderController::class, 'show'])->whereUuid('order');
+            Route::post('/subscription/orders/{order}/expire', [SubscriptionOrderController::class, 'expire'])->whereUuid('order')->middleware('throttle:12,1,subscription-checkout:');
             Route::get('/cash-days/current', [CashDayController::class, 'current']);
             Route::get('/cash-days/by-key/{key}', [CashDayController::class, 'byKey']);
             Route::get('/cash-days/movements/by-key/{key}', [CashMovementController::class, 'byKey']);

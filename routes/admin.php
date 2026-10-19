@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\StatusChangeController;
 use App\Http\Controllers\Admin\StoreController;
 use App\Http\Controllers\Admin\SubscriptionMonitoringController;
+use App\Http\Controllers\Admin\SubscriptionPaymentController;
 use App\Http\Controllers\CurrentUserController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +29,7 @@ Route::post('/administrators/{administrator}/status-changes', [AdministratorCont
 Route::get('/dashboard', DashboardController::class);
 Route::get('/activity', ActivityController::class);
 Route::get('/subscriptions', SubscriptionMonitoringController::class);
+Route::get('/subscription-payments', SubscriptionPaymentController::class);
 Route::get('/accounts', [AccountController::class, 'index']);
 Route::get('/accounts/{account}', [AccountController::class, 'show'])->whereNumber('account');
 Route::get('/accounts/{account}/status-history', [StatusChangeController::class, 'accountHistory'])->whereNumber('account');

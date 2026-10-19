@@ -29,6 +29,7 @@ Admin [account/store status management](ADMIN_STATUS_SETUP.md) adds reviewed sus
 
 [Admin password recovery](ADMIN_PASSWORD_RECOVERY_SETUP.md) adds Forgot/Reset Password pages, trusted role-based owner/admin email links, and revocation of previous administrator sessions through the shared Laravel broker.
 
+[PayMongo QR Ph payments](PAYMONGO_SETUP.md) adds owner self-service Basic purchases, signature-verified payment webhooks, automatic coverage fulfillment, payment history, safe checkout recovery, and a read-only admin payment directory. Register `POST /api/v1/webhooks/paymongo`; payment confirmation comes only from its signed durable callback, never a frontend return URL. The runbook includes queue/scheduler setup and user-run ngrok testing.
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

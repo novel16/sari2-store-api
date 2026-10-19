@@ -59,7 +59,9 @@ it('forces testing onto its own in-memory database and service backends', functi
     $xml = simplexml_load_file(dirname(__DIR__, 2).'/'.$file);
     foreach (['APP_ENV' => 'testing', 'DB_CONNECTION' => 'sqlite', 'DB_DATABASE' => ':memory:',
         'DB_URL' => '', 'SESSION_DRIVER' => 'array', 'CACHE_STORE' => 'array',
-        'MAIL_MAILER' => 'array', 'QUEUE_CONNECTION' => 'sync'] as $name => $expected) {
+        'MAIL_MAILER' => 'array', 'QUEUE_CONNECTION' => 'sync',
+        'PAYMONGO_ENABLED' => 'false', 'PAYMONGO_MODE' => 'test',
+        'PAYMONGO_SECRET_KEY' => '', 'PAYMONGO_WEBHOOK_SECRET' => ''] as $name => $expected) {
         $entry = $xml->xpath('//php/env[@name="'.$name.'"]')[0];
         expect((string) $entry['value'])->toBe($expected);
         expect((string) $entry['force'])->toBe('true');
@@ -71,7 +73,9 @@ it('forces testing onto its own in-memory database and service backends', functi
 it('resolves safe testing values even when the parent process supplies server variables', function () {
     foreach (['APP_ENV' => 'testing', 'APP_KEY' => 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
         'DB_CONNECTION' => 'sqlite', 'DB_DATABASE' => ':memory:', 'DB_URL' => '',
-        'SESSION_DRIVER' => 'array', 'QUEUE_CONNECTION' => 'sync'] as $name => $value) {
+        'SESSION_DRIVER' => 'array', 'QUEUE_CONNECTION' => 'sync',
+        'PAYMONGO_ENABLED' => false, 'PAYMONGO_MODE' => 'test',
+        'PAYMONGO_SECRET_KEY' => '', 'PAYMONGO_WEBHOOK_SECRET' => ''] as $name => $value) {
         expect(Env::get($name))->toBe($value);
     }
 });

@@ -2,7 +2,7 @@
 
 Open Admin → **Subscriptions** at `http://localhost:3001/subscriptions`. This read-only account directory adds summary cards, debounced account/owner search, subscription and account-status filters, 7/30-day expiry windows, pagination, and a shortcut to each account's existing **Manage subscription** screen.
 
-Activation/renewal still uses the established reviewed manual flow. Monitoring does not send reminders, collect payments, change periods, or suspend accounts. There is no new subscription or audit table.
+Reviewed manual grants remain available, and owner PayMongo QR Ph purchases now create coverage automatically after signed webhook verification. This subscription directory monitors coverage from either flow; the separate `/subscription-payments` directory monitors payment and fulfillment states. See [PayMongo setup](PAYMONGO_SETUP.md). This monitoring endpoint does not send reminders, collect payments, change periods, or suspend accounts; its own implementation adds no subscription or audit table.
 
 ## Setup and organization
 
