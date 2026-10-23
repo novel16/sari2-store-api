@@ -79,7 +79,9 @@ it('builds QR Ph checkout from saved Basic terms without granting coverage befor
     Http::assertSent(fn (Request $request) => $request->method() === 'POST'
         && $request['data']['attributes']['payment_method_types'] === ['qrph']
         && $request['data']['attributes']['line_items'][0]['amount'] === 4900
-        && $request['data']['attributes']['reference_number'] === $order->uuid);
+        && $request['data']['attributes']['reference_number'] === $order->uuid
+        && $request['data']['attributes']['success_url'] === rtrim(config('app.frontend_url'), '/').'/subscription/payments/'.$order->uuid.'?payment=return'
+        && $request['data']['attributes']['cancel_url'] === rtrim(config('app.frontend_url'), '/').'/subscription/payments/'.$order->uuid.'?payment=back');
     $this->assertDatabaseCount('subscriptions', 1);
     $this->getJson('/api/v1/stores/'.$this->store->id.'/subscription')->assertOk()->assertJsonPath('data.current.plan.code', 'free');
 });

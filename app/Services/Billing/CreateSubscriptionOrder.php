@@ -71,11 +71,11 @@ class CreateSubscriptionOrder
 
         // Commit our identity and unresolved-account slot BEFORE a network call.
         // An ambiguous result is retained; replaying the local key never creates another session.
-        $base = rtrim(config('app.frontend_url'), '/').'/subscription?order='.$order->uuid;
+        $base = rtrim(config('app.frontend_url'), '/').'/subscription/payments/'.$order->uuid;
         try {
             $checkout = $this->gateway->createCheckout($order->uuid,
                 mb_substr($order->terms['name'].' — '.$order->months.' month subscription', 0, 200),
-                $order->amount_centavos, $base.'&payment=return', $base.'&payment=back');
+                $order->amount_centavos, $base.'?payment=return', $base.'?payment=back');
             DB::transaction(function () use ($order, $checkout) {
                 DB::table('accounts')->where('id', $order->account_id)->lockForUpdate()->first();
                 $current = SubscriptionOrder::whereKey($order->id)->lockForUpdate()->firstOrFail();

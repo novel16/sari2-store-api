@@ -1,6 +1,6 @@
 # PayMongo QR Ph subscription payments
 
-Owners buy or renew Basic from `http://localhost:3000/subscription`. They review the current server-priced offer, open PayMongo Hosted Checkout, and return to the subscription page to check confirmation. There is no owner subscription-request approval step. Admins monitor orders at `http://localhost:3001/subscription-payments`; existing reviewed manual grants remain available separately.
+Owners buy or renew Basic from `http://localhost:3000/subscription`. Choosing Basic opens `/subscription/checkout?plan=basic`, where duration and total appear together. Proceed creates the order and redirects directly to PayMongo Hosted Checkout when its URL is ready. Success and cancel URLs return to `/subscription/payments/{orderUuid}?payment=return` or `?payment=back` to check the saved status. Existing `/subscription?order=...` links are redirected by the frontend to the new order page. There is no owner subscription-request approval step. Admins monitor orders at `http://localhost:3001/subscription-payments`; existing reviewed manual grants remain available separately.
 
 ## Webhook URL to register
 
