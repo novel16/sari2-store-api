@@ -14,6 +14,7 @@ use App\Http\Controllers\CustomerStatementController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PublicWebsiteController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleReversalController;
 use App\Http\Controllers\SalesReportController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+    Route::get('/public/site', PublicWebsiteController::class)->middleware('throttle:300,1,public-website:');
     Route::get('/health', fn () => ['status' => 'ok', 'service' => 'Sari-sari Store POS']);
     Route::post('/webhooks/paymongo', PayMongoWebhookController::class)
         ->middleware('throttle:600,1,paymongo-webhook:');

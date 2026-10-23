@@ -11,7 +11,7 @@
 
 This API uses native Laravel environments: `local` for this workstation, `development` for a shared development server, and `production` for the live installation. Each installation has its own full `.env`; credential-free templates are `.env.example`, `.env.development.example`, and `.env.production.example`.
 
-See [ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md) for setup, optional native `--env` profiles, configuration caching, Sanctum SPA domains, and isolated tests. The existing local database settings and app key are preserved. The API runs on port 8000; client/admin remain on ports 3000/3001.
+See [ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md) for setup, optional native `--env` profiles, configuration caching, Sanctum SPA domains, and isolated tests. The existing local database settings and app key are preserved. Client/admin use ports 3000/3001. The API uses its configured host port: 80 for this workstation's Docker/Sail mapping, or 8000 for the usual non-Docker development server.
 
 The default `composer test` uses isolated SQLite. See [MySQL concurrency checks](docs/MYSQL_CONCURRENCY.md) for the guarded opt-in InnoDB suite and independent repository CI workflows. See [operations](docs/OPERATIONS.md) for deployment, key preservation, backups, restore drills, and performance validation.
 
@@ -30,6 +30,8 @@ Admin [account/store status management](ADMIN_STATUS_SETUP.md) adds reviewed sus
 [Admin password recovery](ADMIN_PASSWORD_RECOVERY_SETUP.md) adds Forgot/Reset Password pages, trusted role-based owner/admin email links, and revocation of previous administrator sessions through the shared Laravel broker.
 
 [PayMongo QR Ph payments](PAYMONGO_SETUP.md) adds owner self-service Basic purchases, signature-verified payment webhooks, automatic coverage fulfillment, payment history, safe checkout recovery, and a read-only admin payment directory. Register `POST /api/v1/webhooks/paymongo`; payment confirmation comes only from its signed durable callback, never a frontend return URL. The runbook includes queue/scheduler setup and user-run ngrok testing.
+[Public website and SEO](WEBSITE_SETUP.md) adds React-rendered home/pricing pages in the existing frontend, a separate public layout, admin draft/preview/publish/restore and image editing, and published JSON APIs. The frontend Node server supplies initial HTML, metadata, schema, canonical/hreflang, sitemap, and robots; Laravel remains API-only for this feature.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

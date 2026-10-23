@@ -1,0 +1,98 @@
+{
+  "brand": {
+    "name": "Sarisari",
+    "tagline": "Your everyday store partner"
+  },
+  "home": {
+    "title": "Sarisari — POS, inventory & utang tracker for sari-sari stores",
+    "description": "Manage cash and utang sales, inventory, customer balances and daily reports with Sarisari, a web-based POS for Filipino sari-sari stores. Start with Free.",
+    "eyebrow": "MADE FOR THE FILIPINO TINDAHAN",
+    "headline": "A little store. A clearer everyday.",
+    "intro": "From your first sale to your last stock count, keep your tindahan organized in one place. More time for your suki. Less time checking notebooks.",
+    "cta_label": "Start your store for free",
+    "features_title": "Your everyday essentials, together.",
+    "features_intro": "Simple tools for the work you already do, built around your neighborhood store.",
+    "steps_title": "From signup to your first sale.",
+    "pricing_title": "A plan that fits your tindahan.",
+    "pricing_intro": "Start with Free. Move to Basic when you need more room for products.",
+    "faq_title": "Before you get started.",
+    "final_title": "Make room for a simpler everyday.",
+    "final_intro": "Create your store and start organizing your products, sales, and customer balances."
+  },
+  "pricing": {
+    "title": "Sarisari pricing — Free & Basic plans for your tindahan",
+    "description": "Compare Sarisari plans for cash and utang POS, inventory and customer balances. Start Free or choose Basic with one-time QR Ph subscription payments.",
+    "headline": "Start small. Grow at your own pace.",
+    "intro": "Clear allowances, everyday essentials, and a plan for your next chapter."
+  },
+  "features": [
+    {
+      "title": "Sell with confidence",
+      "body": "Record cash and utang sales, review your cart, and keep a saved record of every transaction."
+    },
+    {
+      "title": "Know what is on your shelves",
+      "body": "Organize products, scan barcodes, track stock movements, and spot items running low."
+    },
+    {
+      "title": "Keep your suki balances clear",
+      "body": "Record customer utang and cash repayments with a history you can look back on."
+    },
+    {
+      "title": "See how your store is doing",
+      "body": "Review sales, collections and daily cash closing, with reports you can export."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Create your store",
+      "body": "Sign up as a store owner and start with the Free plan."
+    },
+    {
+      "title": "Add your products",
+      "body": "Set your prices and opening stock, then organize your catalog."
+    },
+    {
+      "title": "Make your first sale",
+      "body": "Choose cash or utang, review the total, and save your transaction."
+    }
+  ],
+  "faqs": [
+    {
+      "question": "Do I need to pay to get started?",
+      "answer": "You can create your store on the Free plan. See the current plan allowances below or on the pricing page."
+    },
+    {
+      "question": "Can I record customer utang?",
+      "answer": "Yes. Record utang sales, view customer balances, and save cash repayments with their history."
+    },
+    {
+      "question": "Does Sarisari work without internet?",
+      "answer": "Sarisari needs an internet connection to load and save your store records."
+    },
+    {
+      "question": "How do Basic payments and renewals work?",
+      "answer": "When online billing is available, choose Basic in your account and pay once using PayMongo QR Ph. Your subscription activates after verified payment. Each renewal needs a new payment."
+    }
+  ],
+  "media": {
+    "hero_url": null,
+    "hero_alt": "Sarisari store management preview",
+    "og_image_url": "/social-card.png",
+    "og_image_alt": "Sarisari — your everyday store partner",
+    "logo_url": null
+  },
+  "footer": {
+    "description": "Made for the heart of your neighborhood.",
+    "contact_email": null
+  },
+  "sections": {
+    "order": [
+      "features",
+      "steps",
+      "pricing",
+      "faq"
+    ],
+    "hidden": []
+  }
+}

@@ -64,3 +64,9 @@ Each repository has its own CI workflow. MySQL reset tests must remain opt-in an
 Use Laravel's native environment loading and one private `.env` per installation; configuration files read environment values, and application code reads `config()`. Preserve the deployment's existing `APP_KEY`. See [environment setup](../ENVIRONMENT_SETUP.md) and the [deployment/backup/restore runbook](OPERATIONS.md).
 
 As features grow, extract a module when its responsibilities and ownership become clear. Keep cross-feature business operations explicit in services and their tests. File/table counts alone do not justify a new infrastructure layer. Measure actual query cost, lock waits, and operator workflows before making the architecture more complex.
+
+## Public website boundary
+
+The existing React frontend owns public home/pricing HTML, a separate `PublicLayout`, and its Node rendering server. Laravel exposes only the published JSON projection and administrator content APIs for this feature. Public routes stay outside the owner session provider, read no tenant state, and do not call `/me`. The public plan projection omits account usage, payment history, and unpublished plans.
+
+Website draft and published content share a version-checked document. Save, publish, and restore lock that document and recheck the administrator; immutable revisions preserve actor names and change notes. Restore creates a draft, not a publication. Frontend HTML, metadata, JSON-LD, and sitemap use one published revision and revalidate with ETags. Private owner/admin/preview routes are noindex and absent from the public sitemap. See [website setup](../WEBSITE_SETUP.md) for environment and deployment details.

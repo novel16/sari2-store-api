@@ -11,10 +11,18 @@ use App\Http\Controllers\Admin\StatusChangeController;
 use App\Http\Controllers\Admin\StoreController;
 use App\Http\Controllers\Admin\SubscriptionMonitoringController;
 use App\Http\Controllers\Admin\SubscriptionPaymentController;
+use App\Http\Controllers\Admin\WebsiteController;
 use App\Http\Controllers\CurrentUserController;
 use Illuminate\Support\Facades\Route;
 
 // Inherits /api/v1/admin and the authenticated, active platform admin middleware.
+Route::get('/website', [WebsiteController::class, 'show']);
+Route::patch('/website', [WebsiteController::class, 'update'])->middleware('throttle:30,1');
+Route::post('/website/publish', [WebsiteController::class, 'publish'])->middleware('throttle:12,1');
+Route::post('/website/restore/{revision}', [WebsiteController::class, 'restore'])->whereNumber('revision')->middleware('throttle:12,1');
+Route::get('/website/preview', [WebsiteController::class, 'preview']);
+Route::get('/website/history', [WebsiteController::class, 'history']);
+Route::post('/website/media', [WebsiteController::class, 'upload'])->middleware('throttle:12,1');
 Route::get('/me', CurrentUserController::class);
 Route::patch('/profile', [AdministratorSettingsController::class, 'profile'])->middleware('throttle:6,1,administrator-settings:');
 Route::patch('/password', [AdministratorSettingsController::class, 'password'])->middleware('throttle:6,1,administrator-settings:');
