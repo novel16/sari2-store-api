@@ -3,6 +3,7 @@ name: API checks
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -10,11 +11,14 @@ permissions:
 jobs:
   sqlite:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.3', '8.5']
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: ${{ matrix.php }}
           extensions: mbstring, pdo_sqlite, pdo_mysql
           coverage: none
           tools: composer:v2
@@ -56,3 +60,54 @@ jobs:
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: composer test:mysql -- --compact
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [sqlite, mysql-concurrency]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: api-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo_mysql, bcmath, intl, zip
+          coverage: none
+          tools: composer:v2
+      - name: Validate deployment scripts
+        run: |
+          bash -n deploy/receive.sh deploy/services.sh deploy/package.sh
+          python3 -m py_compile deploy/unpack.py
+          python3 deploy/test_unpack.py
+      - name: Build production artifact
+        run: bash deploy/package.sh
+      - name: Deploy verified artifact
+        env:
+          DEPLOY_KEY: ${{ secrets.EC2_DEPLOY_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # A queued older build must never replace a newer main revision.
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo 'Skipping superseded revision.'
+            exit 0
+          fi
+          umask 077
+          key="$RUNNER_TEMP/tindatala-key"
+          hosts="$RUNNER_TEMP/tindatala-hosts"
+          trap 'rm -f "$key" "$hosts"' EXIT
+          printf '%s\n' "$DEPLOY_KEY" > "$key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$hosts"
+          digest=$(sha256sum "$RUNNER_TEMP/api-release.tar.gz" | cut -d ' ' -f 1)
+          ssh -i "$key" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$hosts" -o ConnectTimeout=20 \
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=8 \
+            tindatala-deploy@ec2-3-26-26-230.ap-southeast-2.compute.amazonaws.com \
+            "deploy $GITHUB_SHA $GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT $digest" \
+            < "$RUNNER_TEMP/api-release.tar.gz"
+          curl --fail --silent --show-error --retry 3 https://api.tindatala.store/api/v1/health
