@@ -22,6 +22,8 @@ jobs:
           extensions: mbstring, pdo_sqlite, pdo_mysql
           coverage: none
           tools: composer:v2
+      # phpunit.xml supplies isolated test settings; no real environment secrets.
+      - run: touch .env
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: vendor/bin/pint --test
       - run: php vendor/bin/pest --compact
@@ -58,6 +60,7 @@ jobs:
           extensions: mbstring, pdo_mysql, pdo_sqlite
           coverage: none
           tools: composer:v2
+      - run: touch .env
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: composer test:mysql -- --compact
 
